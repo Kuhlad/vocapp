@@ -1,0 +1,18 @@
+{
+  "short_name": "VocabLab",
+  "name": "VocabLab Norwegian Vocabulary Trainer",
+  "description": "Learn Norwegian vocabulary offline with space-repetition intervals.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3840/3840735.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#fafaf8",
+  "theme_color": "#2d5a3d",
+  "display": "standalone",
+  "orientation": "portrait"
+}
