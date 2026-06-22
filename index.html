@@ -285,6 +285,20 @@ label.field-lbl {
 </head>
 <body>
 <div class="container">
+<div id="view-profiles" class="view">
+    <div class="profile-container" style="max-width: 500px; margin: 40px auto; padding: 20px; text-align: center;">
+      <h2 style="font-family: 'DM Serif Display', serif; margin-bottom: 24px;">Who is learning today?</h2>
+      
+      <div id="profiles-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;"></div>
+      
+      <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+      
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="new-profile-name" placeholder="Enter name..." style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px;">
+        <button onclick="createNewProfile()" class="btn btn-primary" style="padding: 12px 16px; border-radius: 8px;">+ Create</button>
+      </div>
+    </div>
+  </div>
 
   <div id="view-home" class="view active">
     <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
@@ -630,26 +644,50 @@ let history = [];
 let sessions = 0;
 let bestScore = null;
 
+let currentProfile = localStorage.getItem('vocablab_active_profile') || '';
+
 function save() {
-  try {
-    localStorage.setItem(LS, JSON.stringify({ vocab, verbList, nounList, srs, history, sessions, bestScore }));
-  } catch(e) { console.warn('save failed', e); }
-  updateHomeInfo();
+  // If no profile is selected, don't save yet
+  if (!currentProfile) return;
+  
+  const data = { vocab, verbList, nounList, srs, history, sessions, bestScore };
+  // Save specifically for THIS profile
+  localStorage.setItem(`vocablab_v2_${currentProfile}`, JSON.stringify(data));
 }
 
 function load() {
-  try {
-    const raw = localStorage.getItem(LS);
-    if (!raw) return;
-    const d = JSON.parse(raw);
-    vocab     = d.vocab     || [];
-    verbList  = d.verbList  || [];
-    nounList  = d.nounList  || [];
-    srs       = d.srs       || {};
-    history   = d.history   || [];
-    sessions  = d.sessions  || 0;
-    bestScore = d.bestScore ?? null;
-  } catch(e) {}
+  currentProfile = localStorage.getItem('vocablab_active_profile') || '';
+  
+  if (!currentProfile) {
+    // No profile chosen yet! Show the profile screen and hide the home app
+    showView('profiles');
+    renderProfiles();
+    return;
+  }
+
+  // Load specifically for THIS profile
+  const raw = localStorage.getItem(`vocablab_v2_${currentProfile}`);
+  if (raw) {
+    try {
+      const d = JSON.parse(raw);
+      vocab     = d.vocab     || [];
+      verbList  = d.verbList  || [];
+      nounList  = d.nounList  || [];
+      srs       = d.srs       || {};
+      history   = d.history   || [];
+      sessions  = d.sessions  || 0;
+      bestScore = d.bestScore ?? null;
+    } catch(e) {
+      resetToEmpty();
+    }
+  } else {
+    // Brand new profile! Initialize empty lists
+    resetToEmpty();
+  }
+}
+
+function resetToEmpty() {
+  vocab = []; verbList = []; nounList = []; srs = {}; history = []; sessions = 0; bestScore = null;
 }
 
 // SRS ENGINE — SM-2 + Ebbinghaus forgetting curve
@@ -723,6 +761,67 @@ function srsLevel(word) {
 function srsDue(word) {
   const s = srs[word];
   return s && s.dueAt && Date.now() >= s.dueAt;
+}
+// Get list of all created profile names
+function getProfilesList() {
+  return JSON.parse(localStorage.getItem('vocablab_all_profiles')) || [];
+}
+
+// Render the profiles on screen
+function renderProfiles() {
+  const list = getProfilesList();
+  const container = document.getElementById('profiles-list');
+  container.innerHTML = '';
+
+  if (list.length === 0) {
+    container.innerHTML = `<p style="grid-column: span 2; color: var(--text-muted);">No profiles yet. Create one below!</p>`;
+    return;
+  }
+
+  list.forEach(profileName => {
+    const card = document.createElement('div');
+    card.style = "background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: 12px; cursor: pointer; font-weight: 500; transition: transform 0.2s;";
+    card.innerText = profileName;
+    
+    // Clicking a card logs that user in
+    card.onclick = () => selectProfile(profileName);
+    container.appendChild(card);
+  });
+}
+
+// Add a brand new user
+function createNewProfile() {
+  const input = document.getElementById('new-profile-name');
+  const name = input.value.trim();
+  if (!name) return toast('Please enter a name');
+
+  let list = getProfilesList();
+  if (list.includes(name)) return toast('Name already exists!');
+
+  list.push(name);
+  localStorage.setItem('vocablab_all_profiles', JSON.stringify(list));
+  input.value = '';
+  renderProfiles();
+  toast(`Profile created for ${name}!`);
+}
+
+// Switch into a user's account
+function selectProfile(name) {
+  currentProfile = name;
+  localStorage.setItem('vocablab_active_profile', name);
+  
+  // Load their data and jump straight to the App Home Screen!
+  load();
+  updateHomeInfo();
+  showView('home'); 
+  toast(`Logged in as ${name}`);
+}
+
+// Optional: Put a "Log Out / Switch Profile" button in your navbar settings
+function logoutProfile() {
+  localStorage.removeItem('vocablab_active_profile');
+  currentProfile = '';
+  load(); // This will auto-kick them back to the Profile Select view
 }
 
 function srsDueLabel(word) {
