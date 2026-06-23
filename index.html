@@ -297,7 +297,15 @@ label.field-lbl {
     <div style="margin:15px 0;">OR</div>
 
     <input id="email" type="text" placeholder="Email" style="margin-bottom:8px;">
-    <input id="password" type="text" placeholder="Password" style="margin-bottom:12px;">
+    
+<div style="position:relative;">
+  <input id="password" type="password" placeholder="Password" style="padding-right:40px;">
+
+  <span onclick="togglePassword()" 
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:12px;">
+    👁
+  </span>
+</div>
 
     <button class="btn btn-full" onclick="loginEmailPassword()">Login</button>
     <button class="btn btn-full" onclick="signupEmailPassword()">Signup</button>
@@ -579,6 +587,16 @@ label.field-lbl {
 <div class="toast" id="toast"></div>
 
 <script>
+  
+  function togglePassword() {
+  const input = document.getElementById("password");
+
+  if (input.type === "password") {
+    input.type = "text";
+  } else {
+    input.type = "password";
+  }
+}
 'use strict';
 
 // AUDIO PRONUNCIATION (Text-to-Speech)
