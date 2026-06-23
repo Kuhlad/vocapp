@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+  
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VocabLab</title>
@@ -551,6 +555,17 @@ label.field-lbl {
 <div class="toast" id="toast"></div>
 
 <script>
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyDs_jLcDULw64Muff2lxWA8i9fA3Ou3ap0",
+  authDomain: "vocablab-48ac6.firebaseapp.com",
+  projectId: "vocablab-48ac6",
+  storageBucket: "vocablab-48ac6.firebasestorage.app",
+  messagingSenderId: "167581950426",
+  appId: "1:167581950426:web:fc052c039a5409d1f4a0e3",
+  measurementId: "G-L8LEPDH7VE"
+};
+  
 'use strict';
 
 // AUDIO PRONUNCIATION (Text-to-Speech)
