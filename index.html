@@ -10,6 +10,30 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
+
+  .password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  padding-right: 36px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-hint);
+  user-select: none;
+}
+
+.password-toggle:hover {
+  color: var(--accent);
+}
+
 /* ── TOKENS ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -298,14 +322,11 @@ label.field-lbl {
 
     <input id="email" type="text" placeholder="Email" style="margin-bottom:8px;">
     
-<div style="position:relative;">
-  <input id="password" type="password" placeholder="Password" style="padding-right:40px;">
-
-  <span onclick="togglePassword()" 
-        style=cursor:pointer;font-size:12px;">
-    👁
-  </span>
+<div class="password-wrapper">
+  <input id="password" type="password" placeholder="Password">
+  <span class="password-toggle" onclick="togglePassword(this)">👁</span>
 </div>
+
 
     <button class="btn btn-full" onclick="loginEmailPassword()">Login</button>
     <button class="btn btn-full" onclick="signupEmailPassword()">Signup</button>
@@ -588,13 +609,15 @@ label.field-lbl {
 
 <script>
   
-  function togglePassword() {
+function togglePassword(el) {
   const input = document.getElementById("password");
 
   if (input.type === "password") {
     input.type = "text";
+    el.textContent = "🙈";
   } else {
     input.type = "password";
+    el.textContent = "👁";
   }
 }
 'use strict';
