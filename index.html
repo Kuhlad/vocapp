@@ -285,6 +285,25 @@ label.field-lbl {
 </head>
 <body>
 <div class="container">
+  <!-- LOGIN VIEW -->
+<div id="view-login" class="view active">
+  <div class="card" style="max-width:400px;margin:60px auto;text-align:center;">
+    <h2 style="margin-bottom:20px">Welcome to VocabLab</h2>
+
+    <button class="btn btn-primary btn-full" onclick="loginGoogle()">
+      Sign in with Google
+    </button>
+
+    <div style="margin:15px 0;">OR</div>
+
+    <input id="email" type="text" placeholder="Email" style="margin-bottom:8px;">
+    <input id="password" type="text" placeholder="Password" style="margin-bottom:12px;">
+
+    <button class="btn btn-full" onclick="loginEmailPassword()">Login</button>
+    <button class="btn btn-full" onclick="signupEmailPassword()">Signup</button>
+  </div>
+</div>
+``
 <div id="view-profiles" class="view">
     <div class="profile-container" style="max-width: 500px; margin: 40px auto; padding: 20px; text-align: center;">
       <h2 style="font-family: 'DM Serif Display', serif; margin-bottom: 24px;">Who is learning today?</h2>
@@ -300,7 +319,13 @@ label.field-lbl {
     </div>
   </div>
 
-  <div id="view-home" class="view active">
+  <div id="view-home" class="view">
+    <div class="card">
+  <h3>Cloud Sync</h3>
+  <button class="btn" onclick="saveToCloud()">Save</button>
+  <button class="btn" onclick="loadFromCloud()">Load</button>
+  <button class="btn" onclick="syncNow()">Sync Now</button>
+</div>
     <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
       <h1>VocabLab</h1>
       <span id="home-word-count" style="font-size:13px;color:var(--text-hint)">0 words</span>
@@ -546,6 +571,9 @@ label.field-lbl {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     Progress
   </button>
+  <button class="nav-item" onclick="logout()">
+  Logout
+</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2273,28 +2301,123 @@ renderNounList();
     });
   }
 </script>
+
 <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDs_jLcDULw64Muff2lxWA8i9fA3Ou3ap0",
-    authDomain: "vocablab-48ac6.firebaseapp.com",
-    projectId: "vocablab-48ac6",
-    storageBucket: "vocablab-48ac6.firebasestorage.app",
-    messagingSenderId: "167581950426",
-    appId: "1:167581950426:web:fc052c039a5409d1f4a0e3",
-    measurementId: "G-L8LEPDH7VE"
-  };
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+const firebaseConfig = {
+  apiKey: "AIzaSyDs_jLcDULw64Muff2lxWA8i9fA3Ou3ap0",
+  authDomain: "vocablab-48ac6.firebaseapp.com",
+  projectId: "vocablab-48ac6"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+ // ---------------- AUTH ----------------
+
+window.loginGoogle = async function () {
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  console.log("Google login", result.user);
+};
+
+window.loginEmailPassword = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  await signInWithEmailAndPassword(auth, email, password);
+};
+
+window.signupEmailPassword = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  await createUserWithEmailAndPassword(auth, email, password);
+};
+
+window.logout = async function () {
+  await signOut(auth);
+};
+
+// ---------------- CLOUD SYNC ----------------
+
+window.saveToCloud = async function () {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const data = { vocab, verbList, nounList, srs, history, sessions, bestScore };
+
+  await setDoc(doc(db, "users", user.uid), data);
+  console.log("Saved to cloud");
+};
+
+window.loadFromCloud = async function () {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const snap = await getDoc(doc(db, "users", user.uid));
+  if (snap.exists()) {
+    const d = snap.data();
+
+    vocab     = d.vocab || [];
+    verbList  = d.verbList || [];
+    nounList  = d.nounList || [];
+    srs       = d.srs || {};
+    history   = d.history || [];
+    sessions  = d.sessions || 0;
+    bestScore = d.bestScore || null;
+
+    renderLibrary();
+    updateHomeInfo();
+    console.log("Loaded from cloud");
+  }
+};
+
+window.syncNow = async function () {
+  await saveToCloud();
+};
+
+let syncInterval = null;
+
+window.enableCloudSync = function (enabled) {
+  if (enabled) {
+    syncInterval = setInterval(saveToCloud, 30000);
+  } else {
+    clearInterval(syncInterval);
+  }
+};
+ onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    console.log("User logged in:", user.uid);
+
+    await loadFromCloud();
+
+    document.getElementById("view-login").classList.remove("active");
+    document.getElementById("view-home").classList.add("active");
+  } else {
+    document.getElementById("view-login").classList.add("active");
+    document.getElementById("view-home").classList.remove("active");
+  }
+});
+
 </script>
 </body>
 </html>
