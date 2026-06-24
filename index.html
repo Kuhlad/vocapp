@@ -2376,9 +2376,18 @@ const db = getFirestore(app);
  // ---------------- AUTH ----------------
 
 window.loginGoogle = async function () {
-  const provider = new GoogleAuthProvider();
-  const result = await signInWithPopup(auth, provider);
-  console.log("Google login", result.user);
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    console.log("Google login success:", result.user.email);
+  } catch (err) {
+    if (err.code === 'auth/popup-closed-by-user') {
+      console.log("User closed the popup.");
+    } else {
+      alert("Login failed: " + err.message);
+      console.error(err);
+    }
+  }
 };
 
 window.loginEmailPassword = async function () {
