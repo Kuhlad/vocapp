@@ -1495,40 +1495,82 @@ function runMC(customPool) {
   window._lastReplay = runMC;
   const pool = customPool || shuffle(vocab).slice(0, 12);
   let idx = 0, correct = 0;
+  // Direction: 'no-to-en' = show Norwegian, pick English (original)
+  //            'en-to-no' = show English, pick Norwegian (new)
+  let direction = 'no-to-en';
 
   function render() {
     if (idx >= pool.length) { showResult(correct, pool.length, 'Multiple choice'); return; }
     setProgress(idx + 1, pool.length);
     const w    = pool[idx];
     const opts = shuffle([w, ...shuffle(vocab.filter(v => v.n !== w.n)).slice(0, 3)]);
+
+    const promptWord   = direction === 'no-to-en' ? w.n   : w.e;
+    const speakTarget  = w.n; // always pronounce Norwegian
+    const getOptLabel  = (o)  => direction === 'no-to-en' ? o.e : o.n;
+    const getOptKey    = (o)  => direction === 'no-to-en' ? o.n : o.n; // compare by Norwegian key
+
     document.getElementById('game-content').innerHTML = `
-      <div style="text-align:center;margin-bottom:24px">
-        <p style="font-size:11px;color:var(--text-hint);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">What is the translation?</p>
-        <h2 style="font-size:30px">${w.n}</h2>
+      <div style="text-align:center;margin-bottom:16px">
+        <!-- Direction toggle -->
+        <div style="display:inline-flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px">
+          <button id="dir-no-en" onclick="_mcSetDir('no-to-en')"
+            style="padding:6px 14px;font-size:12px;border:none;cursor:pointer;transition:background .15s;
+                   background:${direction==='no-to-en'?'var(--accent)':'transparent'};
+                   color:${direction==='no-to-en'?'#fff':'var(--text-secondary)'};font-weight:${direction==='no-to-en'?600:400}">
+            🇳🇴 → 🇬🇧
+          </button>
+          <button id="dir-en-no" onclick="_mcSetDir('en-to-no')"
+            style="padding:6px 14px;font-size:12px;border:none;cursor:pointer;transition:background .15s;
+                   background:${direction==='en-to-no'?'var(--accent)':'transparent'};
+                   color:${direction==='en-to-no'?'#fff':'var(--text-secondary)'};font-weight:${direction==='en-to-no'?600:400}">
+            🇬🇧 → 🇳🇴
+          </button>
+        </div>
+
+        <p style="font-size:11px;color:var(--text-hint);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">
+          ${direction === 'no-to-en' ? 'Choose the English translation' : 'Choose the Norwegian word'}
+        </p>
+        <h2 style="font-size:30px">${promptWord}</h2>
       </div>
+
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
-        <button class="btn btn-sm" onclick="speak('${w.n.replace(/'/g, "\\'")}')" title="Play pronunciation">🔊 Slow</button>
-        <button class="btn btn-sm" onclick="speakFast('${w.n.replace(/'/g, "\\'")}')" title="Play at normal speed">🔊 Normal</button>
+        <button class="btn btn-sm" onclick="speak('${speakTarget.replace(/'/g, "\\'")}')" title="Play pronunciation">🔊 Slow</button>
+        <button class="btn btn-sm" onclick="speakFast('${speakTarget.replace(/'/g, "\\'")}')" title="Play at normal speed">🔊 Normal</button>
         <button class="btn btn-sm" onclick="stopAudio()" title="Stop audio">⏹️ Stop</button>
       </div>
+
       <div class="qz-opts">
-        ${opts.map((o, i) => `<div class="qz-opt" id="qo${i}" onclick="_mcPick(${i},'${o.n.replace(/'/g,"\\'")}','${w.n.replace(/'/g,"\\'")}')">${o.e}</div>`).join('')}
+        ${opts.map((o, i) => `
+          <div class="qz-opt" id="qo${i}"
+            onclick="_mcPick(${i},'${o.n.replace(/'/g,"\\'")}','${w.n.replace(/'/g,"\\'")}')">
+            ${getOptLabel(o)}
+          </div>`).join('')}
       </div>`;
-    window._mcPick = (i, chosen, correct_word) => {
+
+    // Toggle direction without losing progress
+    window._mcSetDir = (newDir) => {
+      direction = newDir;
+      render(); // re-render same question in new direction
+    };
+
+    window._mcPick = (i, chosenN, correctN) => {
       document.querySelectorAll('.qz-opt').forEach(el => el.classList.add('locked'));
       const el = document.getElementById('qo' + i);
-      if (chosen === correct_word) {
-        el.classList.add('correct'); srsRecord(correct_word, 5); correct++;
+      if (chosenN === correctN) {
+        el.classList.add('correct'); srsRecord(correctN, 5); correct++;
       } else {
-        el.classList.add('wrong'); srsRecord(correct_word, 1);
-        opts.forEach((o, j) => { if (o.n === correct_word) document.getElementById('qo' + j).classList.add('reveal'); });
+        el.classList.add('wrong'); srsRecord(correctN, 1);
+        opts.forEach((o, j) => {
+          if (o.n === correctN) document.getElementById('qo' + j).classList.add('reveal');
+        });
       }
       idx++; save(); setTimeout(render, 950);
     };
   }
+
   render();
 }
-
 // GAME: MATCHING PAIRS
 function startMatchingGame(customPool) {
   if (!needWords(4)) return;
