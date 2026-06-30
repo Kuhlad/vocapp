@@ -1502,13 +1502,24 @@ function runMC(customPool) {
   function render() {
     if (idx >= pool.length) { showResult(correct, pool.length, 'Multiple choice'); return; }
     setProgress(idx + 1, pool.length);
-    const w    = pool[idx];
-    const opts = shuffle([w, ...shuffle(vocab.filter(v => v.n !== w.n)).slice(0, 3)]);
+    const w = pool[idx];
+
+    // Prefer distractors from the same category (e.g. all verbs, all nouns)
+    // so the answer can't be guessed just by spotting the odd-one-out type.
+    let sameCategory = vocab.filter(v => v.n !== w.n && v.category === w.category);
+    let distractors;
+    if (sameCategory.length >= 3) {
+      distractors = shuffle(sameCategory).slice(0, 3);
+    } else {
+      // Not enough words in this category — fill remaining slots from the rest of vocab
+      const others = shuffle(vocab.filter(v => v.n !== w.n && v.category !== w.category));
+      distractors = [...shuffle(sameCategory), ...others].slice(0, 3);
+    }
+    const opts = shuffle([w, ...distractors]);
 
     const promptWord   = direction === 'no-to-en' ? w.n   : w.e;
     const speakTarget  = w.n; // always pronounce Norwegian
     const getOptLabel  = (o)  => direction === 'no-to-en' ? o.e : o.n;
-    const getOptKey    = (o)  => direction === 'no-to-en' ? o.n : o.n; // compare by Norwegian key
 
     document.getElementById('game-content').innerHTML = `
       <div style="text-align:center;margin-bottom:16px">
@@ -1570,8 +1581,7 @@ function runMC(customPool) {
   }
 
   render();
-}
-// GAME: MATCHING PAIRS
+}// GAME: MATCHING PAIRS
 function startMatchingGame(customPool) {
   if (!needWords(4)) return;
   nav('game');
